@@ -1,61 +1,92 @@
 # Stonewards Particle Optimizer
 
-Client-side BepInEx 5 mod for suppressing selected mining, rock breaking, destructible-prop hit, and wall impact particle effects in Stonewards.
+**Reduce visual clutter from mining and destruction in Stonewards.** Particle Optimizer filters selected local particle effects so digging and breaking objects can look cleaner, with the potential to reduce particle-related rendering work.
 
-**Version:** 0.1.0 (initial source release; requires in-game validation)
+## ✨ Features
 
-## How it works
+- **Mining effects** — independently filter particle bursts from hitting and breaking terrain.
+- **Destructible props** — filter recognized hit particles from destructible objects.
+- **Wall destruction** — filter particle effects triggered by breaking wall sections.
+- **Three modes per category** — keep vanilla effects, show 25% of spawn events, or suppress them.
+- **Client-side design** — filters visual-effect calls locally without intentionally changing mining, damage, or resource logic.
 
-- Harmony patches `PlayerFX.UserCode_RpcGetParticleAndRelease__String__Vector3__Quaternion__Vector3__Single` after Mirror has delivered an RPC to the **local client**, but before the client obtains a pooled particle system. The network command, terrain change, resource spawning, and other players remain untouched.
-- Mining VFX names come from `DiggingManager.DiggingSettingsSO.digMatterProfiles` (`nonDestructionParticleID` and `rockImpactParticleID`).
-- Prop hit VFX names come from loaded `DestructibleProp.particleID` fields. These IDs are refreshed a few times during scene loading, **not** on every frame.
-- Wall impact particle effects are skipped directly in `WallPartAnimator.PlayDestroyFx`. Physical chunk animations are untouched.
+## 🎮 How to use
 
-**Limitations:** An effect used by both mining and another action can be suppressed in both contexts (IDs are not unique to a context). Prop prefabs instantiated late may be missed by the one-time scans. Further runtime testing is required to confirm the real-world FPS effect and coverage. This mod cannot fix performance issues unrelated to the selected VFX.
+The mod works automatically when Stonewards starts with BepInEx. There are no hotkeys or in-game menus.
 
-## Build & install
+By default, all four effect categories are set to `Disabled`. To restore or reduce a particular effect, change its setting in the BepInEx configuration file.
 
-Requires: Windows PowerShell, .NET SDK, game files, a mod profile containing BepInEx 5 (`BepInEx/core/BepInEx.dll` and `0Harmony.dll`).
+## ⚙️ Configuration
 
-From PowerShell in the repository directory:
+The configuration file is created after the first launch:
+
+`BepInEx/config/com.thereisnouser.stonewards.particleoptimizer.cfg`
+
+| Setting | Effect | Default |
+| --- | --- | --- |
+| `DigHit` | Mining hits that do not break terrain | `Disabled` |
+| `DigBreak` | Terrain and rock breaking effects | `Disabled` |
+| `PropHit` | Hit effects from recognized destructible props | `Disabled` |
+| `WallBreak` | Wall destruction particles | `Disabled` |
+
+Each setting accepts:
+
+- `Vanilla` — leave the effect unchanged.
+- `Reduced` — allow one out of every four spawn events for a given effect ID (25% of events, **not** 25% of particles per burst).
+- `Disabled` — skip the selected effect's spawn call.
+
+Advanced options:
+
+- `ExtraBlockedVfxIds` — comma-, semicolon-, or newline-separated effect IDs to suppress.
+- `DebugLogging` — log the first suppressed occurrence of each effect ID; off by default.
+
+Edit the configuration while the game is closed for predictable results.
+
+## 📦 Installation
+
+The repository currently provides source code and a build/install script. No published Thunderstore package is linked yet.
+
+To build and install it into a BepInEx-enabled Stonewards profile, use **Windows PowerShell**, a **.NET SDK**, a local **Stonewards** installation, and **BepInEx 5**.
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\build-and-install.ps1 `
-    -GameDir 'F:\Steam\steamapps\common\Stonewards' `
-    -ProfileDir 'C:\path\to\r2modman\profiles\your-profile'
+git clone https://github.com/thereisnouser/stonewards-particle-optimizer.git
+cd stonewards-particle-optimizer
+
+$gameDir = Read-Host "Stonewards installation directory"
+$profileDir = Read-Host "BepInEx-enabled mod profile directory"
+
+powershell -NoProfile -ExecutionPolicy Bypass -File .\build-and-install.ps1 -GameDir $gameDir -ProfileDir $profileDir
 ```
 
-Replace the profile path with the real r2modman profile path. The DLL is installed to:
+The script builds the plugin and copies `Stonewards.ParticleOptimizer.dll` into:
 
-`<ProfileDir>\BepInEx\plugins\StonewardsParticleOptimizer\Stonewards.ParticleOptimizer.dll`
+`<profile>/BepInEx/plugins/StonewardsParticleOptimizer/`
 
-Run the game, then open the BepInEx log and look for:
+Launch Stonewards through the profile you installed the plugin into.
 
-`Stonewards Particle Optimizer v0.1.0 initialized`
+## 🔧 Compatibility
 
-The config is generated after first game launch:
+- **Game:** Stonewards; an exact supported game version has not been established.
+- **Mod loader:** BepInEx 5.
+- **Multiplayer:** Designed as a client-side visual filter. Host/client multiplayer behavior has not been independently verified.
 
-`<ProfileDir>\BepInEx\config\com.thereisnouser.stonewards.particleoptimizer.cfg`
+## ⚠️ Known limitations
 
-## Configuration
+- Only recognized particle effect IDs and the hooked wall effect are filtered; other effects may remain visible.
+- Some game systems may share effect IDs, so suppressing a mining effect can also hide that same effect elsewhere.
+- Destructible props loaded after the scene scans may not be recognized automatically.
+- FPS improvements have not been benchmarked and depend on whether particles are the performance bottleneck.
 
-Each of `DigHit`, `DigBreak`, `PropHit`, `WallBreak` supports:
+## 🛠️ Development
 
-- `Vanilla`: don't suppress the effect.
-- `Reduced`: keep 1 out of every 4 spawn events per VFX ID (25%).
-- `Disabled`: completely skip the chosen effect's particle spawn.
+The C# plugin uses Harmony to intercept selected local VFX calls. It discovers mining effect IDs from `DiggingManager` profiles, reads recognized `DestructibleProp` effect IDs during scene loading, filters received `PlayerFX` particle spawns, and separately handles `WallPartAnimator` destruction effects. These patches target visual effects rather than the gameplay commands.
 
-The default for all four is `Disabled`. Combat effects and loot are not intentionally filtered. `ExtraBlockedVfxIds` (optional) allows comma-separated IDs for effects not automatically discovered; these extras always use Disabled mode.
+The project targets `netstandard2.1`. Build and installation are handled by the repository's `build-and-install.ps1` script.
 
-Change the configuration before launching the game to guarantee the filter has the new values. The mod does not modify save files or game assemblies.
+## 🔗 Links
 
-## Validation checklist
+[Source code](https://github.com/thereisnouser/stonewards-particle-optimizer) · [Report an issue](https://github.com/thereisnouser/stonewards-particle-optimizer/issues) · [Changelog](CHANGELOG.md)
 
-1. With all options Disabled, hit terrain without fully mining it: hit dust should disappear.
-2. Fully mine rock: break particles should disappear while resources and terrain changes still work.
-3. Hit a destructible prop: its particles should disappear but sound, damage, and drops still work.
-4. Observe a wall chunk breaking: particle burst should disappear; wall physics and chunks should behave normally.
-5. Test as a non-host client in multiplayer: the host and other clients should see their normal effects.
-6. Toggle all categories to Vanilla; compare appearance and frame-time in the same scene.
+---
 
-**Status:** Inspected the Assembly-CSharp.dll supplied 2026-10-24 and identified method calls/fields. A Windows .NET build and live Stonewards session were not available in this environment, so this is a source release, not a claimed tested DLL.
+*Made by thereisnouser*
