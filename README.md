@@ -83,6 +83,14 @@ The C# plugin uses Harmony to intercept selected local VFX calls. It discovers m
 
 The project targets `netstandard2.1`. Build and installation are handled by the repository's `build-and-install.ps1` script.
 
+The Thunderstore upload ZIP can be assembled with the repository's `package-thunderstore.ps1` script, which builds the DLL and puts the package metadata, icon, Thunderstore README, changelog, and plugin DLL in their correct ZIP locations:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\package-thunderstore.ps1 -GameDir $gameDir -ProfileDir $profileDir
+```
+
+The resulting archive is written to `dist/`. It is not uploaded automatically.
+
 ## 🔗 Links
 
 [Source code](https://github.com/thereisnouser/stonewards-particle-optimizer) · [Report an issue](https://github.com/thereisnouser/stonewards-particle-optimizer/issues) · [Changelog](CHANGELOG.md)

@@ -1,0 +1,9 @@
+{
+  "name": "ParticleOptimizer",
+  "version_number": "0.1.0",
+  "website_url": "https://github.com/thereisnouser/stonewards-particle-optimizer",
+  "description": "Reduce or disable selected mining and destruction particle effects for a cleaner view in Stonewards.",
+  "dependencies": [
+    "BepInEx-BepInExPack-5.4.2305"
+  ]
+}
